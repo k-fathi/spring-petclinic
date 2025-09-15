@@ -1,72 +1,60 @@
 pipeline {
     agent any
+
     environment {
-        IMAGE_NAME = "karimfathy1/petclinic-app:${env.BUILD_NUMBER}"
+        APP_NAME = 'petclinic-app'   
+        NEXUS_HOSTED_URL = 'localhost:8083'
+        NEXUS_CREDENTIALS_ID = 'nexus-credentials'
     }
-    stages{
+
+    stages {
         stage('Checking environment varaibles'){
-            steps{
+            steps {
                 echo "BRANCH_NAME  = ${env.BRANCH_NAME}"
-                echo "IMAGE_NAME   = ${IMAGE_NAME}"
                 echo "BUILD_NUMBER = ${env.BUILD_NUMBER}"
             }
-        }
+        }     
         stage('checkout'){
-            steps{
+            steps {
                 echo "Clonning Reposotiory"
                 checkout scm
             }
-        }
-        stage('Cleaning stage'){
-            steps{
-                echo "Cleaning Project"
+        }  
+        stage('Cleaning and Packaging') {
+            steps {
+                echo "Cleaning and Packaging Project"
                 sh './mvnw clean'
             }
-        }
-        stage('build stage'){
-            steps{
-                echo "Building jar file without testing"
-                sh'./mvnw package -DskipTests'
-            }
-        }
-        stage('test stage'){
-            steps{
-                echo "Running Unit tests"
-               // sh './mvnw test'
-                withSonarQubeEnv('SonarQube-server'){
+        }      
+        stage('SonarQube Analysis') {
+            steps {
+                echo "Running SonarQube analysis"
+                withSonarQubeEnv('SonarQube-server') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         sh './mvnw sonar:sonar -Dsonar.login=$SONAR_TOKEN'
                     }
                 }
             }
         }
-        stage('Build Docker Image') {
-            steps {
-                script {           
-                    echo "Building Docker image: ${IMAGE_NAME}"
-                    sh "docker build -t ${IMAGE_NAME} ."
-                }
-            }
-        }
-        stage('Push Docker Image') {
+        stage('Build and Push to Nexus') {
             steps {
                 script {
-                    echo "Pushing Docker image: ${IMAGE_NAME}"
-                    withCredentials([usernamePassword(credentialsId: 'docker-login', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                        sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+                    def fullImageTag = "${NEXUS_HOSTED_URL}/${APP_NAME}:${env.BUILD_NUMBER}"
+                    docker.withRegistry("http://${NEXUS_HOSTED_URL}", NEXUS_CREDENTIALS_ID) {
+                        echo "Building Docker image: ${fullImageTag}"
+                        def customImage = docker.build(fullImageTag)
+                        echo "Pushing Docker image to Nexus..."
+                        customImage.push()
+                        echo "Image pushed successfully!"
                     }
-                    sh "docker push ${IMAGE_NAME}"
                 }
             }
-        }    
+        } 
+    }
+    post {
+        always {
+            echo "Pipeline finished."
+            cleanWs()
+        }
     }
 }
-// test1
-// test2
-// test3
-// test4
-// test5
-// test6
-// test7
-// test7
-// test8
