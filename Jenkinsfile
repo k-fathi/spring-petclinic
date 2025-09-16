@@ -39,11 +39,25 @@ pipeline {
                 }
             }
         }
+        stage('Check Credentials') {
+            steps {
+                script {
+                    echo "Listing available credentials..."
+                    def creds = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+                        com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials.class,
+                        Jenkins.instance,
+                        null,
+                        null
+                    )
+                    creds.each { println("ID: ${it.id}, Username: ${it.username}") }
+                }
+            }
+        }
         stage('Build and Push Docker Image') {
             steps {
                 script {
                     def fullImageTag = "${NEXUS_URL}/${APP_NAME}:${env.BUILD_NUMBER}"
-                    docker.withRegistry("http://${NEXUS_URL}", NEXUS_CREDENTIALS_ID) {
+                    docker.withRegistry("http://${NEXUS_URL}", "nexus-credentials") {
                         echo "Building Docker image: ${fullImageTag}"
                         def customImage = docker.build(fullImageTag)
                         echo "Pushing Docker image to Nexus..."
@@ -65,3 +79,5 @@ pipeline {
     }
 }
 //test1
+//test2
+//test3
