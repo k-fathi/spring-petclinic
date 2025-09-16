@@ -1,6 +1,5 @@
 pipeline {
     agent any
-
     environment {
         APP_NAME = 'petclinic-app'   
         NEXUS_HOSTED_URL = 'localhost:8083'
@@ -62,3 +61,4 @@ pipeline {
 //test2
 //test3
 //test4
+//test5
