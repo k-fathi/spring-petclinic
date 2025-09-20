@@ -25,8 +25,10 @@ pipeline {
                 sh './mvnw clean package -DskipTests'
             }
         }
-        stage('SonarQube Analysis') {
+        stage('Testing') {
             steps {
+                echo "Running Unit Tests..."
+                sh './mvnw test'
                 echo "Running SonarQube analysis"
                 withSonarQubeEnv('SonarQube-server') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
@@ -36,20 +38,6 @@ pipeline {
                           -Dsonar.login=$SONAR_TOKEN
                         """
                     }
-                }
-            }
-        }
-        stage('Check Credentials') {
-            steps {
-                script {
-                    echo "Listing available credentials..."
-                    def creds = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
-                        com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials.class,
-                        Jenkins.instance,
-                        null,
-                        null
-                    )
-                    creds.each { println("ID: ${it.id}, Username: ${it.username}") }
                 }
             }
         }
@@ -79,5 +67,3 @@ pipeline {
     }
 }
 //test1
-//test2
-//test3
